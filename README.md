@@ -7,19 +7,19 @@ Ce projet met en place une pipeline MLOps complète pour un modèle de classific
 
 projet-mlops
 
-|--- api
-|   |--src
-|   |--Dockerfile
-|--- webapp
-|   |--src 
+|--- api  
+|   |--src  
 |   |--Dockerfile  
-|--- airflow
+|--- webapp  
+|   |--src  
+|   |--Dockerfile  
+|--- airflow  
 |   |--dag.py  
-|   |--Dockerfile
-|--- docs
-|--- tests
-|--- .gitignore
-|--- docker-compose.yml  # Configuration pour exécuter tous les services en local
+|   |--Dockerfile  
+|--- docs  
+|--- tests  
+|--- .gitignore  
+|--- docker-compose.yml  
 |--- github-action.yaml  
 |--- README.md  
 
