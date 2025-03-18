@@ -6,14 +6,20 @@ Ce projet met en place une pipeline MLOps complète pour un modèle de classific
 ##  Structure du Repository
 
 ├── api
+
 │├── src  
 │├── Dockerfile 
+
 ├── webapp
+
 │├── src  
 │├── Dockerfile  
+
 ├── airflow
+
 │├── dag.py  
 │├── Dockerfile
+
 ├── docs
 ├── tests
 ├── .gitignore
