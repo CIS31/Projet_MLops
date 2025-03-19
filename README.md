@@ -7,21 +7,21 @@ Ce projet met en place une pipeline MLOps complète pour un modèle de classific
 
 projet-mlops
 
-|--- api  
-|   |--src  
-|   |--Dockerfile  
-|--- webapp  
-|   |--src  
-|   |--Dockerfile  
-|--- airflow  
-|   |--dag.py  
-|   |--Dockerfile  
-|--- docs  
-|--- tests  
-|--- .gitignore  
-|--- docker-compose.yml  
-|--- github-action.yaml  
-|--- README.md  
+|-- api  
+||-----src  
+||-----Dockerfile  
+|-- webapp  
+||-----src  
+||-----Dockerfile  
+|-- airflow  
+||-----dag.py  
+||-----Dockerfile  
+|-- docs  
+|-- tests  
+|-- .gitignore  
+|-- docker-compose.yml  
+|-- github-action.yaml  
+|-- README.md  
 
 
 ##  Technologies Utilisées
