@@ -1,17 +1,15 @@
-version: '3'
-
 x-airflow-common:
   &airflow-common
   image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.8.2}
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__ACCESS_CONTROL_ALLOW_HEADERS: 'content-type, origin, authorization, accept'
     AIRFLOW__API__ACCESS_CONTROL_ALLOW_METHODS: 'GET, POST, OPTIONS, DELETE'
     AIRFLOW__API__ACCESS_CONTROL_ALLOW_ORIGINS: '*'
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow # If no AIRFLOW__DATABASE__SQL_ALCHEMY_CONN variable is set then SQLite database is created in ${AIRFLOW_HOME}/airflow.db.
+    _PIP_ADDITIONAL_REQUIREMENTS: minio  # Ajouter ici la bibliothèque minio
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
@@ -24,7 +22,7 @@ x-airflow-common:
 
 services:
   postgres:
-    image: postgres:13
+    image: postgres:14-alpine
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
@@ -34,17 +32,20 @@ services:
       interval: 5s
       retries: 5
     restart: always
+    networks:
+      - airflow_network
 
   minio:
     image: minio/minio:latest
     container_name: minio
     restart: always
     environment:
-      MINIO_ACCESS_KEY: minio_access_key
-      MINIO_SECRET_KEY: minio_secret_key
-    command: server /data
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: miniopassword
+    command: 'minio server /data --console-address ":8900"'
     ports:
-      - "9000:9000"
+      - "9000:9000"    # API
+      - "8900:8900"  # WebUI
     volumes:
       - minio_data:/data
     networks:
@@ -65,6 +66,8 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    networks:
+      - airflow_network
 
   airflow-scheduler:
     <<: *airflow-common
@@ -79,6 +82,8 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    networks:
+      - airflow_network
 
   airflow-triggerer:
     <<: *airflow-common
@@ -93,6 +98,8 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    networks:
+      - airflow_network
 
   airflow-init:
     <<: *airflow-common
@@ -100,8 +107,9 @@ services:
     command:
       - -c
       - |
-        mkdir -p /sources/logs /sources/dags /sources/plugins
-        chown -R "${AIRFLOW_UID}:0" /sources/{logs,dags,plugins}
+        mkdir -p /sources/airflow/logs /sources/airflow/dags /sources/airflow/plugins
+        chown -R "${AIRFLOW_UID}:0" /sources/airflow/{logs,dags,plugins}
+        chmod -R 755 /sources/airflow/{logs,dags,plugins}
         exec /entrypoint airflow version
     environment:
       <<: *airflow-common-env
@@ -113,6 +121,8 @@ services:
     user: "0:0"
     volumes:
       - .:/sources
+    networks:
+      - airflow_network
 
   airflow-cli:
     <<: *airflow-common
@@ -125,9 +135,12 @@ services:
       - bash
       - -c
       - airflow
+    networks:
+      - airflow_network
 
 volumes:
   minio_data:
+    driver: local
   airflow_dags:
   airflow_logs:
   airflow_plugins:
