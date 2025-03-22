@@ -78,3 +78,6 @@ projet-mlops
 6. **Monitoring**
    - Logs et métriques avec Elasticsearch & Kibana
 
+## Commandes utiles :
+   **Lancer le docker compose sur plateforme de dev :**
+   - docker-compose -f docker_compose_local.yaml up -d
