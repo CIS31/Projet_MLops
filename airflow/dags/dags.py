@@ -3,6 +3,7 @@ import requests
 import psycopg2
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
+from airflow.operators.python_operator import PythonOperator
 from datetime import datetime
 from io import BytesIO
 from minio import Minio
