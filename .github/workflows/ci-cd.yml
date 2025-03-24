@@ -23,8 +23,6 @@ jobs:
       - name: Build and push to local registry
         uses: docker/build-push-action@v6
         with:
-          context: .  # Contexte de build, par défaut c'est le répertoire courant
-          file: ./Dockerfile
           push: true
           tags: localhost:5000/name/app:latest
       
