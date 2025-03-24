@@ -34,6 +34,10 @@ jobs:
         run: |
           sleep 30  # Attendre que les services soient prêts
 
+      - name: Initialize Airflow database
+        run: |
+          docker-compose -f docker_compose.yaml exec airflow-worker airflow db init
+
       - name: Run Pytest
         run: |
           pytest tests/
