@@ -36,7 +36,7 @@ jobs:
 
       - name: Initialize Airflow database
         run: |
-          docker-compose -f docker_compose.yaml exec airflow-worker airflow db init
+          docker-compose -f docker_compose.yaml exec webserver airflow db init
 
       - name: Run Pytest
         run: |
