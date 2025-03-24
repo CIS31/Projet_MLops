@@ -1,4 +1,4 @@
 pytest
-apache-airflow
-psycopg2
+apache-airflow==2.8.2
+psycopg2-binary
 pendulum
