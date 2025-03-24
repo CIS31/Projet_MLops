@@ -4,6 +4,7 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow.models import TaskInstance, DagRun
 from airflow.utils.state import State
 from airflow.utils.types import DagRunType
+from airflow.utils.db import create_session
 from datetime import datetime
 
 @pytest.fixture
@@ -19,6 +20,12 @@ def dag():
     # Ajouter des tâches
     task = DummyOperator(task_id="dummy_task", dag=dag)
     return dag
+
+@pytest.fixture
+def session():
+    # Crée une session SQLAlchemy pour les tests
+    with create_session() as session:
+        yield session
 
 def test_task_execution(dag, session):
     # Créer un DagRun pour le DAG
