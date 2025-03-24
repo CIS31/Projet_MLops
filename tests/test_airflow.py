@@ -1,19 +1,29 @@
 import pytest
+import psycopg2
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.models import TaskInstance, DagRun
 from airflow.utils.state import State
 from airflow.utils.types import DagRunType
-from airflow.utils.db import create_session
 from datetime import datetime
 import pendulum
+import os
+
+# Configure la connexion à PostgreSQL pour les tests
+DB_CONN = {
+    "dbname": "airflow",
+    "user": "airflow",
+    "password": "airflow",
+    "host": "postgres",
+    "port": 5432,
+}
 
 @pytest.fixture
 def dag():
     # Crée un DAG simple pour les tests
     dag = DAG(
         "test_dag",
-        schedule_interval="@daily",
+        schedule="@daily",
         start_date=pendulum.datetime(2025, 3, 22, tz="UTC"),  # Ajout du fuseau horaire
         catchup=False,
     )
@@ -23,28 +33,37 @@ def dag():
     return dag
 
 @pytest.fixture
-def session():
-    # Crée une session SQLAlchemy pour les tests
-    with create_session() as session:
-        yield session
+def db_connection():
+    # Crée une connexion PostgreSQL pour les tests
+    conn = psycopg2.connect(**DB_CONN)
+    yield conn
+    conn.close()
 
-def test_task_execution(dag, session):
+def test_task_execution(dag, db_connection):
+    # Vérifier la connexion à la base de données
+    with db_connection.cursor() as cursor:
+        cursor.execute("SELECT 1;")
+        result = cursor.fetchall()
+        assert len(result) > 0, "La connexion à la base de données a échoué."
+
     # Créer un DagRun pour le DAG
     execution_date = pendulum.datetime(2025, 3, 22, tz="UTC")  # Ajout du fuseau horaire
-    dag_run = DagRun(
-        dag_id=dag.dag_id,
-        run_id="test_run",
-        run_type=DagRunType.MANUAL,
-        execution_date=execution_date,
-        state=State.RUNNING,
-    )
-    session.add(dag_run)
-    session.commit()
+    with db_connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO dag_run (dag_id, run_id, run_type, execution_date, state)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id;
+            """,
+            ("test_dag", "test_run", DagRunType.MANUAL, execution_date, State.RUNNING),
+        )
+        dag_run_id = cursor.fetchone()[0]
+        db_connection.commit()
 
     # Créer une instance de la tâche
     task = dag.get_task("dummy_task")
     task_instance = TaskInstance(task=task, execution_date=execution_date)
-    task_instance.dag_run = dag_run
+    task_instance.dag_run_id = dag_run_id
 
     # Exécuter la tâche et vérifier son état
     task_instance.run()

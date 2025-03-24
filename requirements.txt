@@ -1,4 +1,4 @@
 pytest
 apache-airflow
-psycopg2-binary
+psycopg2
 pendulum
