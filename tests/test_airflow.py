@@ -14,7 +14,7 @@ def dag():
     dag = DAG(
         "test_dag",
         schedule_interval="@daily",
-        start_date=datetime(2025, 3, 22),
+        start_date=pendulum.datetime(2025, 3, 22, tz="UTC"),  # Ajout du fuseau horaire
         catchup=False,
     )
     
