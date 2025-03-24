@@ -6,6 +6,7 @@ from airflow.utils.state import State
 from airflow.utils.types import DagRunType
 from airflow.utils.db import create_session
 from datetime import datetime
+import pendulum
 
 @pytest.fixture
 def dag():
@@ -29,7 +30,7 @@ def session():
 
 def test_task_execution(dag, session):
     # Créer un DagRun pour le DAG
-    execution_date = datetime(2025, 3, 22)
+    execution_date = pendulum.datetime(2025, 3, 22, tz="UTC")  # Ajout du fuseau horaire
     dag_run = DagRun(
         dag_id=dag.dag_id,
         run_id="test_run",
