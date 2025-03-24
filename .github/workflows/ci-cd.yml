@@ -20,6 +20,18 @@ jobs:
           docker-compose -f docker_compose.yaml up -d
           docker-compose -f docker_compose.yaml ps
 
+      - name: Wait for Airflow Init to complete
+        run: |
+          echo "Waiting for Airflow Init to complete..."
+          for i in {1..10}; do
+            if docker-compose -f docker_compose.yaml logs airflow-init | grep -q "Database successfully upgraded"; then
+              echo "Airflow Init completed successfully!"
+              break
+            fi
+            echo "Airflow Init not ready yet. Retrying in 10 seconds..."
+            sleep 10
+          done
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -30,17 +42,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Wait for Airflow to initialize
-        run: |
-          sleep 30  # Attendre que les services soient prêts
-
-      - name: Initialize Airflow database
-        run: |
-          docker-compose -f docker_compose.yaml exec webserver airflow db init
-
       - name: Run Pytest
         run: |
           pytest tests/
+
+      - name: Debug Docker logs
+        if: failure()
+        run: |
+          echo "Fetching logs for debugging..."
+          docker-compose -f docker_compose.yaml logs
 
       - name: Stop services
         run: |
