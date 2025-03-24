@@ -6,11 +6,6 @@ on:
 jobs:
   docker:
     runs-on: ubuntu-latest
-    services:
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -22,8 +17,8 @@ jobs:
 
       - name: Set up Docker Compose
         run: |
-          docker-compose -f docker_compose.yaml build
-          docker-compose -f docker_compose.yaml push
+          docker-compose -f docker_compose.yaml up -d
+          docker-compose -f docker_compose.yaml ps
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -35,6 +30,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Wait for Airflow to initialize
+        run: |
+          sleep 30  # Attendre que les services soient prêts
+
       - name: Run Pytest
         run: |
           pytest tests/
+
+      - name: Stop services
+        run: |
+          docker-compose -f docker_compose.yaml down
