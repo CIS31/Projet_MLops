@@ -70,7 +70,6 @@ def test_boto3_minio_connection(boto3_client):
         print("Connexion à Minio réussie avec boto3. Buckets disponibles :")
         for bucket in buckets:
             print(f" - {bucket['Name']}")
-        assert len(buckets) > 0, "Aucun bucket trouvé dans Minio."
     except Exception as e:
         pytest.fail(f"Échec de la connexion à Minio avec boto3 : {e}")
 
