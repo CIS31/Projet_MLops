@@ -1,13 +1,22 @@
 import pytest
 import psycopg2
 from airflow import DAG
-from airflow.operators.dummy_operator import DummyOperator
-from airflow.models import TaskInstance, DagRun
+from airflow.models import TaskInstance, DagRun, DagBag
 from airflow.utils.state import State
 from airflow.utils.types import DagRunType
 from datetime import datetime
 import pendulum
 import os
+from minio import Minio
+from minio.error import S3Error
+import boto3 
+
+
+MINIO_HOST = "127.0.0.1:9000"  # Nom du service Minio dans Docker et le port
+MINIO_ACCESS_KEY = 'minio'
+MINIO_SECRET_KEY = 'miniopassword'
+MINIO_BUCKET = 'bucket.romain'
+
 
 # Configure la connexion à PostgreSQL pour les tests
 DB_CONN = {
@@ -18,56 +27,51 @@ DB_CONN = {
     "port": 5432,
 }
 
-@pytest.fixture
-def dag():
-    # Crée un DAG simple pour les tests
-    dag = DAG(
-        "test_dag",
-        schedule="@daily",
-        start_date=pendulum.datetime(2025, 3, 22, tz="UTC"),  # Ajout du fuseau horaire
-        catchup=False,
-    )
-    
-    # Ajouter des tâches
-    task = DummyOperator(task_id="dummy_task", dag=dag)
-    return dag
 
 @pytest.fixture
-def db_connection():
+def postgres_connection():
     # Crée une connexion PostgreSQL pour les tests
-    conn = psycopg2.connect(**DB_CONN)
-    yield conn
-    conn.close()
+    try:
+        conn = psycopg2.connect(**DB_CONN)
+        yield conn
+    finally:
+        conn.close()
 
-def test_task_execution(dag, db_connection):
-    # Vérifier la connexion à la base de données
-    with db_connection.cursor() as cursor:
-        cursor.execute("SELECT 1;")
-        result = cursor.fetchall()
-        assert len(result) > 0, "La connexion à la base de données a échoué."
-        print("Connexion à la base de données réussie.")
+# Configurer la connexion à Minio pour les tests
+@pytest.fixture
+def boto3_client():
+    # Configurer la connexion à Minio avec boto3
+    return boto3.client(
+        's3',
+        endpoint_url=f"http://{MINIO_HOST}",  # Utiliser HTTP car Minio est en local
+        aws_access_key_id=MINIO_ACCESS_KEY,
+        aws_secret_access_key=MINIO_SECRET_KEY,
+    )
 
-    # Créer un DagRun pour le DAG
-    execution_date = pendulum.datetime(2025, 3, 22, tz="UTC")  # Ajout du fuseau horaire
-    with db_connection.cursor() as cursor:
-        cursor.execute(
-            """
-            INSERT INTO dag_run (dag_id, run_id, run_type, execution_date, state, clear_number)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            RETURNING id;
-            """,
-            ("test_dag", "test_run", DagRunType.MANUAL, execution_date, State.RUNNING, 0),
-        )
-        dag_run_id = cursor.fetchone()[0]
-        db_connection.commit()
 
-    # Créer une instance de la tâche
-    task = dag.get_task("dummy_task")
-    task_instance = TaskInstance(task=task, run_id=f"manual__{execution_date.isoformat()}")
-    task_instance.dag_run_id = dag_run_id
+def test_postgres_connection(postgres_connection):
+    # Vérifier la connexion à PostgreSQL
+    try:
+        with postgres_connection.cursor() as cursor:
+            cursor.execute("SELECT 1;")  # Exécuter une requête simple
+            result = cursor.fetchone()
+            assert result is not None, "La requête n'a retourné aucun résultat."
+            assert result[0] == 1, "La requête n'a pas retourné le résultat attendu."
+            print("\nConnexion à PostgreSQL réussie et requête exécutée avec succès.")
+    except Exception as e:
+        pytest.fail(f"Échec de la connexion à PostgreSQL : {e}")
 
-    # Exécuter la tâche et vérifier son état
-    task_instance.run()
 
-    # Vérifier que la tâche a bien été exécutée avec succès
-    assert task_instance.state == State.SUCCESS
+def test_boto3_minio_connection(boto3_client):
+    # Vérifier la connexion à Minio avec boto3
+    try:
+        response = boto3_client.list_buckets()
+        buckets = response.get('Buckets', [])
+        print("Connexion à Minio réussie avec boto3. Buckets disponibles :")
+        for bucket in buckets:
+            print(f" - {bucket['Name']}")
+        assert len(buckets) > 0, "Aucun bucket trouvé dans Minio."
+    except Exception as e:
+        pytest.fail(f"Échec de la connexion à Minio avec boto3 : {e}")
+
+

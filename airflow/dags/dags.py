@@ -194,7 +194,7 @@ default_args = {
 }
 
 dag = DAG(
-    'download_and_upload_images_to_minio_and_postgresql',
+    dag_id='download_and_upload_images_to_minio_and_postgresql',
     default_args=default_args,
     schedule_interval=None,  # Cela peut être planifié si nécessaire
     catchup=False

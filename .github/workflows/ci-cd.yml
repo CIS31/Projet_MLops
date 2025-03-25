@@ -44,7 +44,7 @@ jobs:
 
       - name: Run Pytest
         run: |
-          pytest tests/
+          pytest -s tests/
 
       - name: Debug Docker logs
         if: failure()

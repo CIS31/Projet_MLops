@@ -54,6 +54,11 @@ services:
       - minio_data:/data
     networks:
       - airflow_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   airflow-webserver:
     <<: *airflow-common
