@@ -5,3 +5,4 @@ minio
 pyOpenSSL
 cryptography
 boto3
+dotaenv

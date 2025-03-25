@@ -1,30 +1,25 @@
+import os
 import pytest
 import psycopg2
-from airflow import DAG
-from airflow.models import TaskInstance, DagRun, DagBag
-from airflow.utils.state import State
-from airflow.utils.types import DagRunType
-from datetime import datetime
-import pendulum
-import os
-from minio import Minio
-from minio.error import S3Error
-import boto3 
+import boto3
+from dotenv import load_dotenv
 
+# Charger les variables d'environnement depuis .env
+load_dotenv(dotenv_path=".env")
 
-MINIO_HOST = "127.0.0.1:9000"  # Nom du service Minio dans Docker et le port
-MINIO_ACCESS_KEY = 'minio'
-MINIO_SECRET_KEY = 'miniopassword'
-MINIO_BUCKET = 'bucket.romain'
+# Récupérer les variables d'environnement
+MINIO_HOST = os.getenv("MINIO_HOST")
+MINIO_ACCESS_KEY = os.getenv("MINIO_USER")
+MINIO_SECRET_KEY = os.getenv("MINIO_PASS")
+MINIO_BUCKET = os.getenv("MINIO_BUCKET")
 
-
-# Configure la connexion à PostgreSQL pour les tests
+# Configuration PostgreSQL
 DB_CONN = {
-    "dbname": "airflow",
-    "user": "airflow",
-    "password": "airflow",
-    "host": "0.0.0.0",
-    "port": 5432,
+    "dbname": os.getenv("DB_NAME"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASS"),
+    "host": os.getenv("DB_HOST"),
+    "port": int(os.getenv("DB_PORT")),
 }
 
 

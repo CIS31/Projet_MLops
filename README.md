@@ -81,3 +81,5 @@ projet-mlops
 ## Commandes utiles :
    **Lancer le docker compose sur plateforme de dev :**
    - docker-compose -f docker_compose_local.yaml up -d
+   **Lancer les tests sur plateforme de dev :**
+   - pytest -s tests/
