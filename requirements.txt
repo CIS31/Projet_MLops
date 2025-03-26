@@ -2,7 +2,5 @@ pytest
 apache-airflow==2.8.2
 psycopg2-binary
 minio
-pyOpenSSL
-cryptography
-boto3
 python-dotenv
+pytest-mock

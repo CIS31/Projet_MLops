@@ -6,8 +6,14 @@ from minio import Minio
 from minio.error import S3Error
 from dotenv import load_dotenv
 
-# Charger les variables d'environnement depuis .env
-load_dotenv(dotenv_path="/sources/.env")
+# Déterminer le chemin du fichier .env
+if os.getenv("DOCKER_ENV"):  # Si la variable DOCKER_ENV est définie, on est dans Docker
+    env_path = "/sources/.env"
+else:  # Sinon, on est en local, notamment pour les tests
+    env_path = ".env"
+
+# Charger les variables d'environnement depuis le chemin déterminé
+load_dotenv(dotenv_path=env_path)
 GITHUB_REPO = os.getenv("GITHUB_REPO")
 GITHUB_BRANCH = os.getenv("GITHUB_BRANCH")
 MINIO_HOST = os.getenv("MINIO_HOST_DAG")

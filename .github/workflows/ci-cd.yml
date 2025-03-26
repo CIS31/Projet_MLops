@@ -44,7 +44,7 @@ jobs:
 
       - name: Run Pytest
         run: |
-          pytest -s tests/
+          PYTHONPATH=$(pwd) pytest -v tests/
 
       - name: Debug Docker logs
         if: failure()
