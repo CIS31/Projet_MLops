@@ -11,6 +11,7 @@ x-airflow-common:
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${DB_USER}:${DB_PASS}@postgres:${DB_PORT}/${DB_NAME}
     _PIP_ADDITIONAL_REQUIREMENTS: minio  # Ajouter ici la bibliothèque minio
   volumes:
+    - .:/sources # Monter la racine pour accéder au fichier .env notamment
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/plugins:/opt/airflow/plugins
