@@ -1,16 +1,19 @@
 x-airflow-common:
   &airflow-common
-  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.8.2}
+  image: custom-airflow:latest
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__DEFAULT_TIMEZONE: CEST
     AIRFLOW__API__ACCESS_CONTROL_ALLOW_HEADERS: 'content-type, origin, authorization, accept'
     AIRFLOW__API__ACCESS_CONTROL_ALLOW_METHODS: 'GET, POST, OPTIONS, DELETE'
     AIRFLOW__API__ACCESS_CONTROL_ALLOW_ORIGINS: '*'
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${DB_USER}:${DB_PASS}@postgres:${DB_PORT}/${DB_NAME}
-    _PIP_ADDITIONAL_REQUIREMENTS: minio  # Ajouter ici la bibliothèque minio
     DOCKER_ENV: "true"  # Ajout de la variable d'environnement
+    MINIO_HOST: ${MINIO_HOST_DAG}
+    MINIO_ROOT_USER: ${MINIO_USER}
+    MINIO_ROOT_PASSWORD: ${MINIO_PASS}
   volumes:
     - .:/sources # Monter la racine pour accéder au fichier .env notamment
     - ./airflow/dags:/opt/airflow/dags
@@ -21,10 +24,13 @@ x-airflow-common:
     &airflow-common-depends-on
     postgres:
       condition: service_healthy
+    minio:
+      condition: service_healthy
 
 services:
   postgres:
     image: postgres:14-alpine
+    container_name: postgres
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_USER}
@@ -46,6 +52,7 @@ services:
     container_name: minio
     restart: always
     environment:
+      MINIO_HOST: ${MINIO_HOST_DAG}
       MINIO_ROOT_USER: ${MINIO_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_PASS}
     command: 'minio server /data --console-address ":${MINIO_PORT_UI}"'

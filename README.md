@@ -78,8 +78,16 @@ projet-mlops
 6. **Monitoring**
    - Logs et métriques avec Elasticsearch & Kibana
 
-## Commandes utiles :
-   **Lancer le docker compose sur plateforme de dev :**
+## Commandes utiles sur plateforme de dev :
+
+   **Lancer le docker compose :**
+   - docker build -t custom-airflow:latest .
    - docker-compose -f docker_compose_local.yaml up -d
-   **Lancer les tests sur plateforme de dev :**
-   - pytest -s tests/
+
+   **Lancer les tests :**
+   - PYTHONPATH=$(pwd) pytest -v tests/
+
+   **Vérifier les bibliothèques dans airflow-webserveur :**
+   docker exec -it projet_mlops-airflow-webserver-1 bash
+   pip list
+   pip install -r /sources/requirements.txt

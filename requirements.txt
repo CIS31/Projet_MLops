@@ -1,6 +1,13 @@
+--index-url https://download.pytorch.org/whl/cpu
+torch==2.4.0
+torchvision==0.19.0
+
+--index-url https://pypi.org/simple
 pytest
+pytest-mock
 apache-airflow==2.8.2
 psycopg2-binary
 minio
 python-dotenv
-pytest-mock
+Pillow
+scikit-learn

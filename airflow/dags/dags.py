@@ -3,6 +3,7 @@ from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from datetime import datetime
 from fonctions import download_and_upload_images_from_github
+from regressionLogistique import train_logistic_regression_model
 from dotenv import load_dotenv
 
 # Charger les variables d'environnement depuis .env
@@ -41,4 +42,11 @@ download_task2 = PythonOperator(
     dag=dag
 )
 
-download_task1 >> download_task2
+createModel_task = PythonOperator(
+    task_id='createModel',
+    python_callable=train_logistic_regression_model,
+    op_args=[{'dandelion', 'grass'}],
+    dag=dag
+)
+
+download_task1 >> download_task2 >> createModel_task
