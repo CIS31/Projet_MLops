@@ -28,7 +28,7 @@ projet-mlops
 | **Composant**          | **Technologie**        |
 |----------------------|----------------------|
 | **Orchestration**     | Apache Airflow       |
-| **Deep Learning**     | FastAI / TensorFlow  |
+| **Deep Learning**     | pyTorch             |
 | **Feature Store**     | PostgreSQL          |
 | **ML Metadata Store** | MLflow              |
 | **Stockage Modèle**   | AWS S3 (MinIO)      |
@@ -59,7 +59,7 @@ projet-mlops
    - Stockage des features dans PostgreSQL
 
 2. **Entraînement du Modèle**
-   - Entraînement avec FastAI ou TensorFlow
+   - Entraînement avec pyTorch
    - Enregistrement des expériences avec MLflow
    - Sauvegarde du modèle sur AWS S3 (MinIO)
 
@@ -80,14 +80,13 @@ projet-mlops
 
 ## Commandes utiles sur plateforme de dev :
 
-   **Lancer le docker compose :**
-   - docker build -t custom-airflow:latest .
-   - docker-compose -f docker_compose_local.yaml up -d
+   **Lancer le projet :**
+   - docker-compose -f docker_compose.yaml up -d
 
    **Lancer les tests :**
    - PYTHONPATH=$(pwd) pytest -v tests/
 
    **Vérifier les bibliothèques dans airflow-webserveur :**
-   docker exec -it projet_mlops-airflow-webserver-1 bash
-   pip list
-   pip install -r /sources/requirements.txt
+   - docker exec -it projet_mlops-airflow-webserver-1 bash
+   - pip list
+   - pip install -r /sources/requirements.txt

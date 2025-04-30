@@ -1,6 +1,8 @@
 x-airflow-common:
   &airflow-common
-  image: custom-airflow:latest
+  build:
+    context: .
+    dockerfile: Dockerfile.airflow
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -26,6 +28,8 @@ x-airflow-common:
       condition: service_healthy
     minio:
       condition: service_healthy
+    minio-init:
+      condition: service_completed_successfully
 
 services:
   postgres:
@@ -33,10 +37,20 @@ services:
     container_name: postgres
     environment:
       POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_USER}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: postgres
+    command: >
+      sh -c "
+        docker-entrypoint.sh postgres &
+        pid=$$!;
+        echo 'Attente de PostgreSQL...';
+        until pg_isready -U ${DB_USER}; do sleep 1; done;
+        echo 'Création des bases airflow_db et mlflow_db...';
+        psql -U ${DB_USER} -d postgres -c 'CREATE DATABASE airflow_db;' || true;
+        psql -U ${DB_USER} -d postgres -c 'CREATE DATABASE mlflow_db;' || true;
+        wait $$pid"
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "airflow"]
+      test: ["CMD", "pg_isready", "-U", "${DB_USER}"]
       interval: 5s
       retries: 5
     restart: always
@@ -68,6 +82,19 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  minio-init:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "
+      sleep 5;
+      mc alias set local http://minio:9000 ${MINIO_USER} ${MINIO_PASS} &&
+      mc mb local/mlflow || true"
+    networks:
+      - airflow_network
 
   airflow-webserver:
     <<: *airflow-common
@@ -155,6 +182,28 @@ services:
       - airflow
     networks:
       - airflow_network
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    container_name: mlflow
+    environment:
+      MLFLOW_BACKEND_STORE_URI: postgresql+psycopg2://${DB_USER}:${DB_PASS}@postgres:${DB_PORT}/${DB_NAME_MLF}
+      MLFLOW_ARTIFACT_ROOT: s3://mlflow/
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${MINIO_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_PASS}
+    ports:
+      - "5000:5000"
+    networks:
+      - airflow_network
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri postgresql+psycopg2://${DB_USER}:${DB_PASS}@postgres:${DB_PORT}/${DB_NAME_MLF}
+      --default-artifact-root s3://mlflow/
 
 volumes:
   minio_data:

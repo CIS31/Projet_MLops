@@ -11,3 +11,4 @@ minio
 python-dotenv
 Pillow
 scikit-learn
+mlflow==2.22.0

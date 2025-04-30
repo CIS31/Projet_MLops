@@ -15,13 +15,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y docker-compose
 
-      - name: Build Docker File
-        run: |
-          docker build -t custom-airflow:latest .
-
       - name: Set up Docker Compose
         run: |
-          docker-compose -f docker_compose.yaml up -d
+          docker-compose -f docker_compose.yaml up --build -d
           docker-compose -f docker_compose.yaml ps
 
       - name: Wait for Airflow Init to complete
@@ -39,7 +35,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.8'
+          python-version: '3.9'
 
       - name: Install dependencies
         run: |
