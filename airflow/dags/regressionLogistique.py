@@ -3,186 +3,204 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import mlflow
+import mlflow.pytorch
 from torchvision import transforms
 from torch.utils.data import DataLoader, Dataset, random_split
 from minio import Minio
 from PIL import Image
-from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import (
+    confusion_matrix,
+    classification_report,
+    accuracy_score,
+    f1_score,
+)
 from dotenv import load_dotenv
 from datetime import datetime
 from io import BytesIO
 
-
-# Déterminer le chemin du fichier .env
-if os.getenv("DOCKER_ENV"):  # Si la variable DOCKER_ENV est définie, on est dans Docker
+# ---------------------------
+# Charger les variables d'environnement
+# ---------------------------
+if os.getenv("DOCKER_ENV"):  # Dans Docker
     env_path = "/sources/.env"
-else:  # Sinon, on est en local, notamment pour les tests
+else:  # En local
     env_path = ".env"
-
-# Charger les variables d'environnement depuis le chemin déterminé
 load_dotenv(dotenv_path=env_path)
-MINIO_HOST = os.getenv("MINIO_HOST_DAG")
-MINIO_ACCESS_KEY = os.getenv("MINIO_USER")
-MINIO_SECRET_KEY = os.getenv("MINIO_PASS")
-MINIO_BUCKET = os.getenv("MINIO_BUCKET")
 
+MINIO_HOST          = os.getenv("MINIO_HOST_DAG")
+MINIO_ACCESS_KEY    = os.getenv("MINIO_USER")
+MINIO_SECRET_KEY    = os.getenv("MINIO_PASS")
+MINIO_BUCKET        = os.getenv("MINIO_BUCKET")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://mlflow:5000")
+MODEL_NAME          = os.getenv("MODEL_NAME", "Dandelion_vs_Grass")
+
+# ---------------------------
+# Exporter les credentials AWS pour MLflow → S3 (MinIO)
+# ---------------------------
+os.environ["AWS_ACCESS_KEY_ID"]     = MINIO_ACCESS_KEY
+os.environ["AWS_SECRET_ACCESS_KEY"] = MINIO_SECRET_KEY
+# Indiquer l'endpoint S3 que MLflow doit utiliser
+os.environ["MLFLOW_S3_ENDPOINT_URL"] = f"http://{MINIO_HOST}"
+
+# ---------------------------
 # Connexion au client MinIO
+# ---------------------------
 minio_client = Minio(
     MINIO_HOST,
     access_key=MINIO_ACCESS_KEY,
     secret_key=MINIO_SECRET_KEY,
-    secure=False  # Utiliser HTTP pour une connexion locale
+    secure=False,  # HTTP en local
 )
 
-# Classe pour charger les images depuis MinIO
+# ---------------------------
+# Configuration MLflow
+# ---------------------------
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+mlflow.set_experiment("Dandelion_vs_Grass")
+
+# ---------------------------
+# Dataset personnalisé pour charger les images depuis MinIO
+# ---------------------------
 class MinIODataset(Dataset):
-    def __init__(self, minio_client, bucket_name, folders, transform=None):
-        self.minio_client = minio_client
-        self.bucket_name = bucket_name
-        self.folders = folders  # Liste des dossiers à explorer (par exemple ['dandelion', 'grass'])
+    def __init__(self, client, bucket, folders, transform=None):
+        self.client = client
+        self.bucket = bucket
+        self.folders = folders
         self.transform = transform
         self.image_paths = []
         self.labels = []
-        
-        # Lister les objets dans MinIO et collecter les chemins d'images et leurs labels
         for label, folder in enumerate(folders):
-            objects = minio_client.list_objects(bucket_name, prefix=folder + '/', recursive=True)
-            for obj in objects:
+            for obj in client.list_objects(bucket, prefix=folder + '/', recursive=True):
                 self.image_paths.append(obj.object_name)
-                self.labels.append(label)  # Dandelion -> 0, Grass -> 1 (par exemple)
-    
+                self.labels.append(label)
+
     def __len__(self):
         return len(self.image_paths)
-    
-    def __getitem__(self, idx):
-        image_path = self.image_paths[idx]
-        label = self.labels[idx]
 
-        # Télécharger l'image depuis MinIO
-        obj = self.minio_client.get_object(self.bucket_name, image_path)
-        img = Image.open(obj)
-        
+    def __getitem__(self, idx):
+        path = self.image_paths[idx]
+        label = self.labels[idx]
+        obj = self.client.get_object(self.bucket, path)
+        img = Image.open(obj).convert("RGB")
         if self.transform:
             img = self.transform(img)
-        
         return img, label
 
-# Fonction pour entraîner et évaluer le modèle
-def train_logistic_regression_model(folders=['dandelion', 'grass'], num_epochs=50, batch_size=32, lr=0.01):
-    # Prétraitement des images et transformation
+# ---------------------------
+# Fonction principale d'entraînement et évaluation
+# ---------------------------
+def train_logistic_regression_model(
+    folders=['dandelion', 'grass'],
+    num_epochs=50,
+    batch_size=32,
+    lr=0.01
+):
+    # 1. Prétraitement des images
     transform = transforms.Compose([
-        transforms.Resize((128, 128)),  # Redimensionner les images
-        transforms.ToTensor(),  # Convertir les images en tensor
-        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])  # Normalisation
+        transforms.Resize((128, 128)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5]*3, std=[0.5]*3),
     ])
 
-    # Charger les images depuis MinIO via le Dataset personnalisé
-    dataset = MinIODataset(minio_client, MINIO_BUCKET, folders, transform=transform)
-    
-    # Split des données en Train, Validation, Test (80% train, 10% val, 10% test)
-    train_size = int(0.8 * len(dataset))
-    val_size = int(0.1 * len(dataset))
-    test_size = len(dataset) - train_size - val_size
-    train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size])
-    print(f"Dataset size : {len(dataset)}")
-    print(f"Train size: {len(train_dataset)}, Validation size: {len(val_dataset)}, Test size: {len(test_dataset)}")
+    # 2. Chargement des données depuis MinIO
+    dataset = MinIODataset(minio_client, MINIO_BUCKET, folders, transform)
+    n = len(dataset)
+    train_size = int(0.8 * n)
+    val_size   = int(0.1 * n)
+    test_size  = n - train_size - val_size
+    train_ds, val_ds, test_ds = random_split(dataset, [train_size, val_size, test_size])
 
-    # Créer des DataLoader pour les différents ensembles
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
+    val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False)
+    test_loader  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False)
 
-    # Définition du modèle de régression logistique
+    print(f"Total: {n}, Train: {len(train_ds)}, Val: {len(val_ds)}, Test: {len(test_ds)}")
+
+    # 3. Définition du modèle de régression logistique
+    input_size = 128 * 128 * 3
     class LogisticRegressionModel(nn.Module):
         def __init__(self, input_size):
-            super(LogisticRegressionModel, self).__init__()
-            self.fc = nn.Linear(input_size, 1)  # Une seule sortie pour la régression logistique
-
+            super().__init__()
+            self.fc = nn.Linear(input_size, 1)
         def forward(self, x):
-            x = x.view(x.size(0), -1)  # Aplatir l'image en un vecteur
-            x = torch.sigmoid(self.fc(x))  # Appliquer la fonction sigmoïde pour obtenir une probabilité
-            return x
+            x = x.view(x.size(0), -1)
+            return torch.sigmoid(self.fc(x))
 
-    # Définir la taille d'entrée après le redimensionnement des images (128x128x3)
-    input_size = 128 * 128 * 3
-
-    # Créer une instance du modèle
     model = LogisticRegressionModel(input_size)
-
-    # Définir la fonction de perte et l'optimiseur
-    criterion = nn.BCELoss()  # Binary Cross Entropy pour la régression logistique
+    criterion = nn.BCELoss()
     optimizer = optim.SGD(model.parameters(), lr=lr)
 
-    # Entraînement du modèle
-    for epoch in range(num_epochs):
-        model.train()  # Mode entraînement
-        for images, labels in train_loader:
-            optimizer.zero_grad()  # Initialiser les gradients
-            outputs = model(images)  # Propagation avant
-            loss = criterion(outputs.squeeze(), labels.float())  # Calcul de la perte
-            loss.backward()  # Propagation arrière
-            optimizer.step()  # Mise à jour des poids
+    # 4. Lancer un run MLflow pour tracker params, metrics et modèle
+    with mlflow.start_run(run_name="LogisticRegression_Airflow"):
+        # 4.1 Log des hyperparamètres
+        mlflow.log_param("num_epochs", num_epochs)
+        mlflow.log_param("batch_size", batch_size)
+        mlflow.log_param("learning_rate", lr)
+        mlflow.pytorch.autolog()
 
-        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
+        # 4.2 Entraînement
+        for epoch in range(num_epochs):
+            model.train()
+            running_loss = 0.0
+            for imgs, labels in train_loader:
+                optimizer.zero_grad()
+                outputs = model(imgs).squeeze()
+                loss = criterion(outputs, labels.float())
+                loss.backward()
+                optimizer.step()
+                running_loss = loss.item()
+            print(f"Epoch {epoch+1}/{num_epochs} - Loss: {running_loss:.4f}")
+            mlflow.log_metric("train_loss", running_loss, step=epoch)
 
-    # Évaluation sur l'ensemble de validation
-    model.eval()  # Mode évaluation
-    all_preds = []
-    all_labels = []
+        # 4.3 Validation
+        model.eval()
+        val_preds, val_labels = [], []
+        with torch.no_grad():
+            for imgs, labels in val_loader:
+                preds = (model(imgs).squeeze() > 0.5).float()
+                val_preds.extend(preds.cpu().numpy())
+                val_labels.extend(labels.cpu().numpy())
+        val_acc = accuracy_score(val_labels, val_preds)
+        val_f1  = f1_score(val_labels, val_preds)
+        print(f"Validation Acc: {val_acc:.4f}, F1: {val_f1:.4f}")
+        print("Val Confusion Matrix:\n", confusion_matrix(val_labels, val_preds))
+        print("Val Report:\n", classification_report(val_labels, val_preds))
+        mlflow.log_metric("validation_accuracy", val_acc)
+        mlflow.log_metric("validation_f1_score", val_f1)
 
-    with torch.no_grad():
-        for images, labels in val_loader:
-            outputs = model(images)
-            preds = (outputs.squeeze() > 0.5).float()  # Convertir en classes (0 ou 1)
-            all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(labels.cpu().numpy())
+        # 4.4 Test final
+        test_preds, test_labels = [], []
+        with torch.no_grad():
+            for imgs, labels in test_loader:
+                preds = (model(imgs).squeeze() > 0.5).float()
+                test_preds.extend(preds.cpu().numpy())
+                test_labels.extend(labels.cpu().numpy())
+        test_acc = accuracy_score(test_labels, test_preds)
+        test_f1  = f1_score(test_labels, test_preds)
+        print(f"Test Acc: {test_acc:.4f}, F1: {test_f1:.4f}")
+        print("Test Confusion Matrix:\n", confusion_matrix(test_labels, test_preds))
+        print("Test Report:\n", classification_report(test_labels, test_preds))
+        mlflow.log_metric("test_accuracy", test_acc)
+        mlflow.log_metric("test_f1_score", test_f1)
 
-    # Calcul de la matrice de confusion et rapport de classification
-    print("Classification report (Validation set):")
-    print(classification_report(all_labels, all_preds))
-    
-    print("Confusion Matrix (Validation set):")
-    print(confusion_matrix(all_labels, all_preds))
+        # 4.5 Log du modèle dans MLflow
+        mlflow.pytorch.log_model(
+            model,
+            artifact_path="model",
+            registered_model_name=MODEL_NAME  # ex: "Dandelion_vs_Grass"
+        )
 
-    # Évaluation finale sur l'ensemble de test
-    model.eval()
-    all_preds = []
-    all_labels = []
-
-    with torch.no_grad():
-        for images, labels in test_loader:
-            outputs = model(images)
-            preds = (outputs.squeeze() > 0.5).float()  # Convertir en classes (0 ou 1)
-            all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(labels.cpu().numpy())
-
-    # Rapport de classification et matrice de confusion sur le test set
-    print("Classification report (Test set):")
-    print(classification_report(all_labels, all_preds))
-
-    print("Confusion Matrix (Test set):")
-    print(confusion_matrix(all_labels, all_preds))
-
-    # Calcul de la précision (accuracy) sur l'ensemble de test
-    accuracy = np.sum(np.array(all_preds) == np.array(all_labels)) / len(all_labels)
-    print(f"Précision sur l'ensemble de test : {accuracy * 100:.2f}%")
-
-     # Créer le nom du fichier pour sauvegarder le modèle (incluant la date et la précision)
-    date_str = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    model_filename = f"model_{date_str}_accuracy_{accuracy * 100:.2f}%.pth"
-
-    # Créer le dossier "model" dans MinIO s'il n'existe pas
-    model_folder = "model"
-    objects = minio_client.list_objects(MINIO_BUCKET, prefix=model_folder + '/', recursive=True)
-    empty_file = BytesIO()
-    if not any(obj.object_name.startswith(model_folder) for obj in objects):
-        # Créer le dossier virtuel "model" (MinIO permet de créer des préfixes)
-        minio_client.put_object(MINIO_BUCKET, f"{model_folder}/.keep", empty_file, len(empty_file.getvalue())) # Ajouter un fichier vide pour créer le dossier
-
-    # Sauvegarder le modèle dans MinIO
-    with BytesIO() as model_buffer:
-        torch.save(model.state_dict(), model_buffer)
-        model_buffer.seek(0)
-        minio_client.put_object(MINIO_BUCKET, f"{model_folder}/{model_filename}", model_buffer, model_buffer.tell())
-
-    print(f"Modèle sauvegardé sous {model_folder}/{model_filename} dans le bucket {MINIO_BUCKET}")
+        # 5. Backup optionnel sur MinIO
+        date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        fn = f"model_{date_str}_acc_{test_acc*100:.2f}.pth"
+        buf = BytesIO()
+        torch.save(model.state_dict(), buf)
+        buf.seek(0)
+        prefix = "model/"
+        # Créer le dossier virtuel si nécessaire
+        if not any(o.object_name.startswith(prefix)
+                   for o in minio_client.list_objects(MINIO_BUCKET, prefix=prefix, recursive=True)):
+            minio_client.put_object(MINIO_BUCKET, prefix + ".keep", BytesIO(), 0)
+        minio_client.put_object(MINIO_BUCKET, prefix + fn, buf, buf.getbuffer().nbytes)
+        print(f"Modèle sauvegardé sur MinIO : {prefix + fn}")

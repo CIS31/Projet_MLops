@@ -1,5 +1,5 @@
 # Utilisation de l'image de base de MLflow
 FROM ghcr.io/mlflow/mlflow:v2.11.3
 
-# Installer psycopg2 pour PostgreSQL
-RUN pip install psycopg2-binary
+# Installer les dépendances (psycopg2 pour PostgreSQL et boto3 pour lire & servire les artefacts depuis MinIO via S3
+RUN pip install psycopg2-binary boto3
