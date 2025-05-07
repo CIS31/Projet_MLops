@@ -90,3 +90,9 @@ projet-mlops
    - docker exec -it projet_mlops-airflow-webserver-1 bash
    - pip list
    - pip install -r /sources/requirements.txt
+
+   **Ajouter une bibliotèque compatible au projet (par example savoir quelle version de mlflow est compatible) :**
+   - source venv/bin/activate
+   - pip list #mlflow n'est pas présent
+   - pip install mlflow
+   - pip list #mlflow est présent et on ajoute la version compatible dans le fichier requierements.txt, mlflow==2.22.0
