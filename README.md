@@ -3,26 +3,6 @@
 ##  Description du Projet
 Ce projet met en place une pipeline MLOps complète pour un modèle de classification d'images (pissenlits vs herbe) en utilisant diverses technologies modernes. Il intègre le prétraitement des données, l'entraînement et la gestion du modèle, le déploiement, la surveillance et l'automatisation du pipeline.
 
-##  Structure du Repository
-
-projet-mlops
-
-|-- api  
-||-----src  
-||-----Dockerfile  
-|-- webapp  
-||-----src  
-||-----Dockerfile  
-|-- airflow  
-||-----dag.py  
-||-----Dockerfile  
-|-- docs  
-|-- tests  
-|-- .gitignore  
-|-- docker-compose.yml  
-|-- github-action.yaml  
-|-- README.md  
-
 
 ##  Technologies Utilisées
 | **Composant**          | **Technologie**        |
