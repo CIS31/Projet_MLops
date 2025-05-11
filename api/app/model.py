@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
 
-# 💡 Remarque :
+# Remarque :
 # Actuellement, seuls les poids du modèle sont enregistrés dans le fichier .pth (via model.state_dict()).
 # Cela nécessite de redéfinir manuellement l'architecture dans l'API pour pouvoir recharger les poids.
 # Une alternative serait de sauvegarder l'objet modèle complet avec torch.save(model),
