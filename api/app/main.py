@@ -1,54 +1,93 @@
+from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.responses import JSONResponse
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
-import requests
 from io import BytesIO
+import boto3
 import os
+from model import LogisticRegressionModel
 
-# --- Configuration ---
-MINIO_ENDPOINT = "http://localhost:9000"
-MODEL_PATH = "bucket.romain/model/model_2025-05-10_16-58-15_acc_80.00.pth"
+# Configuration MinIO, a mettre dans le fichier .env
+MINIO_ENDPOINT = "localhost:9000"  # Sans http:// ici pour boto3
 MINIO_USER = os.getenv("MINIO_USER", "minio")
-MINIO_PASS = os.getenv("MINIO_PASS", "minio123")
-MODEL_URL = f"{MINIO_ENDPOINT}/{MODEL_PATH}"
+MINIO_PASS = os.getenv("MINIO_PASS", "miniopassword")
+BUCKET_NAME = "bucket.romain"  
+OBJECT_KEY = "model/model_2025-05-11_17-09-11_acc_75.00.pth"  
 
-IMAGE_PATH = "photo.jpg"  # Assurez-vous que l’image est bien présente
+app = FastAPI(title="Image Classification API")
+app = FastAPI(title="Image Classification API")
 
-# --- Fonction pour charger le modèle depuis MinIO en RAM ---
-def load_model_from_minio():
-    print("Téléchargement du modèle depuis MinIO...")
-    response = requests.get(MODEL_URL, auth=(MINIO_USER, MINIO_PASS))
-    if response.status_code != 200:
-        raise Exception(f"Échec du téléchargement ({response.status_code})")
+# Chargement du modèle une seule fois au démarrage
+@app.on_event("startup")
+def load_model():
+    global model
+    print("Connexion à MinIO et chargement du modèle...")
 
-    buffer = BytesIO(response.content)
-    model = torch.load(buffer, map_location=torch.device("cpu"))
-    model.eval()
-    print("Modèle chargé en mémoire.")
-    return model
+    s3 = boto3.client(
+        's3',
+        endpoint_url=f"http://{MINIO_ENDPOINT}",
+        aws_access_key_id=MINIO_USER,
+        aws_secret_access_key=MINIO_PASS,
+        region_name="us-east-1"
+    )
 
-# --- Fonction de traitement de l'image ---
-def preprocess_image(image_path):
+    try:
+        response = s3.get_object(Bucket=BUCKET_NAME, Key=OBJECT_KEY)
+        model_data = response['Body'].read()
+        buffer = BytesIO(model_data)
+
+        model = LogisticRegressionModel()
+        model.load_state_dict(torch.load(buffer, map_location=torch.device("cpu")))
+        model.eval()
+
+        print("Modèle chargé depuis MinIO.")
+    except Exception as e:
+        print(f"Erreur lors du chargement du modèle : {e}")
+        raise RuntimeError("Échec du téléchargement du modèle depuis MinIO.")
+
+# Prétraitement de l'image
+def preprocess_image(image_data: bytes):
+    image = Image.open(BytesIO(image_data)).convert("RGB")
     transform = transforms.Compose([
-        transforms.Resize((224, 224)),
+        transforms.Resize((128, 128)),  # correspond à ce que le modèle attend
         transforms.ToTensor(),
     ])
-    image = Image.open(image_path).convert("RGB")
-    return transform(image).unsqueeze(0)  # Ajout de la dimension batch
+    return transform(image).unsqueeze(0)
 
-# --- Fonction de prédiction ---
-def predict(model, image_tensor):
+# Prédiction
+def predict(image_tensor):
     with torch.no_grad():
-        outputs = model(image_tensor)
-        predicted_class = torch.argmax(outputs, dim=1).item()
-        return "dandelion" if predicted_class == 0 else "grass"
+        output = model(image_tensor)
+        prob = output.item()
+        return "dandelion" if prob >= 0.5 else "grass"
 
-# --- Main ---
-if __name__ == "__main__":
-    print("Lancement de l'application de prédiction")
+# Endpoint POST
+@app.post("/predict")
+async def predict_image(file: UploadFile = File(...)):
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Le fichier doit être une image.")
+    image_bytes = await file.read()
+    image_tensor = preprocess_image(image_bytes)
+    prediction = predict(image_tensor)
+    return JSONResponse(content={"prediction": prediction})
 
-    model = load_model_from_minio()
-    image_tensor = preprocess_image(IMAGE_PATH)
-    result = predict(model, image_tensor)
 
-    print(f"Résultat de la prédiction : {result}")
+# Test de l'API
+# curl -X POST "http://localhost:8000/predict" \
+#   -H "accept: application/json" \
+#   -H "Content-Type: multipart/form-data" \
+#   -F "file=@photo.jpg"
+
+# Requirements pour l'API
+# fastapi
+# uvicorn
+# torch
+# torchvision
+# boto3
+# pillow
+# python-multipart
+
+
+# Pour lancer l'API :
+# uvicorn main:app --reload --port 8000
