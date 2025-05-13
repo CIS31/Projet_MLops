@@ -23,7 +23,7 @@ app = FastAPI(title="Image Classification API")
 def load_model():
     global model
     print("Connexion à MinIO et chargement du modèle...")
-
+           
     s3 = boto3.client(
         's3',
         endpoint_url=f"http://{MINIO_ENDPOINT}",
@@ -33,18 +33,45 @@ def load_model():
     )
 
     try:
-        response = s3.get_object(Bucket=BUCKET_NAME, Key=OBJECT_KEY)
-        model_data = response['Body'].read()
-        buffer = BytesIO(model_data)
+        # Lister les objets du dossier "model/"
+        response = s3.list_objects_v2(Bucket=BUCKET_NAME, Prefix="model/")
+        all_keys = [obj['Key'] for obj in response.get("Contents", []) if obj['Key'].endswith(".pth")]
 
+        if not all_keys:
+            raise RuntimeError("Aucun fichier .pth trouvé dans le bucket.")
+
+        # Prendre le premier fichier .pth trouvé (un peu lent, mlflow ne selectionne pas le meilleur modèle)
+        selected_key = all_keys[0]
+        print(f"Modèle trouvé : {selected_key}")
+
+        # Télécharger ce modèle
+        response = s3.get_object(Bucket=BUCKET_NAME, Key=selected_key)
+        buffer = BytesIO(response['Body'].read())
+
+        # Charger dans le modèle
         model = LogisticRegressionModel()
         model.load_state_dict(torch.load(buffer, map_location=torch.device("cpu")))
         model.eval()
 
-        print("Modèle chargé depuis MinIO.")
+        print("Modèle chargé avec succès depuis MinIO.")
+
     except Exception as e:
         print(f"Erreur lors du chargement du modèle : {e}")
         raise RuntimeError("Échec du téléchargement du modèle depuis MinIO.")
+
+    # try:
+    #     response = s3.get_object(Bucket=BUCKET_NAME, Key=OBJECT_KEY)
+    #     model_data = response['Body'].read()
+    #     buffer = BytesIO(model_data)
+
+    #     model = LogisticRegressionModel()
+    #     model.load_state_dict(torch.load(buffer, map_location=torch.device("cpu")))
+    #     model.eval()
+
+    #     print("Modèle chargé depuis MinIO.")
+    # except Exception as e:
+    #     print(f"Erreur lors du chargement du modèle : {e}")
+    #     raise RuntimeError("Échec du téléchargement du modèle depuis MinIO.")
 
 # Prétraitement de l'image
 def preprocess_image(image_data: bytes):
@@ -67,8 +94,15 @@ def predict(image_tensor):
 async def predict_image(file: UploadFile = File(...)):
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Le fichier doit être une image.")
+
     image_bytes = await file.read()
-    image_tensor = preprocess_image(image_bytes)
+    print(f"🧪 Fichier reçu : {file.filename}, {len(image_bytes)} octets")
+
+    try:
+        image_tensor = preprocess_image(image_bytes)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Erreur de lecture de l'image : {e}")
+
     prediction = predict(image_tensor)
     return JSONResponse(content={"prediction": prediction})
 
