@@ -45,7 +45,7 @@ Ce projet met en place une pipeline MLOps complète pour un modèle de classific
 
 3. **Déploiement & API**
    - API FastAPI pour servir le modèle
-   - WebApp (Gradio/Streamlit) pour l'interface utilisateur
+   - WebApp (Streamlit) pour l'interface utilisateur
 
 4. **Automatisation avec Apache Airflow**
    - DAG pour réentraîner et mettre à jour le modèle
