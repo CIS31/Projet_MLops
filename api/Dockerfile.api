@@ -4,14 +4,14 @@ FROM python:3.9-slim
 # Set work directory
 WORKDIR /app
 
-# # Copy requirements and install
-# COPY requirements.txt .
-# RUN pip install --no-cache-dir -r requirements.txt
+# Copy requirements and install
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy API source code
-COPY api/app/ ./app/
+COPY app/ ./app/
 
-# Set environment variables (optionnel)
+# Set environment variables (allowing to see logs in real-time)
 ENV PYTHONUNBUFFERED=1
 
 # Launch API

@@ -204,6 +204,32 @@ services:
       --port 5000
       --backend-store-uri postgresql+psycopg2://${DB_USER}:${DB_PASS}@postgres:${DB_PORT}/${DB_NAME_MLF}
       --default-artifact-root s3://mlflow/
+  api:
+    build:
+      context: ./api
+    container_name: api
+    ports:
+      - "8000:8000"
+    environment:
+      MINIO_USER: ${MINIO_USER}
+      MINIO_PASS: ${MINIO_PASS}
+    networks:
+      - airflow_network
+    depends_on:
+      - minio
+
+  webapp:
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile
+    container_name: webapp
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+    networks:
+      - airflow_network
+
 
 volumes:
   minio_data:

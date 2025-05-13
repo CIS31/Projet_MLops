@@ -14,9 +14,9 @@ scikit-learn==1.6.1
 mlflow==2.22.0
 
 
-fastapi
-uvicorn
-boto3
-python-multipart
+# fastapi
+# uvicorn
+# boto3
+# python-multipart
 
-streamlit
+# streamlit
