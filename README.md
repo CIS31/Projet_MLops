@@ -27,9 +27,16 @@ Ce projet met en place une pipeline MLOps complète pour un modèle de classific
 - Python 3.8+
 - Kubernetes (MiniKube ou Docker Desktop)
 - Git
-- AWS CLI (pour MinIO)
-- MLflow
-- Apache Airflow
+  
+##  Accès aux Services
+
+| Service     | URL                             |
+|-------------|----------------------------------|
+| **API FastAPI** | [http://localhost:8000/docs](http://localhost:8000/docs) |
+| **WebApp Streamlit** | [http://localhost:8501](http://localhost:8501) |
+| **MinIO UI** | [http://localhost:9000](http://localhost:9000) |
+| **Airflow**  | [http://localhost:8080](http://localhost:8080) |
+| **MLflow UI**| [http://localhost:5000](http://localhost:5000) |
 
 ##  Pipeline MLOps
 
@@ -76,3 +83,12 @@ Ce projet met en place une pipeline MLOps complète pour un modèle de classific
    - pip list #mlflow n'est pas présent
    - pip install mlflow
    - pip list #mlflow est présent et on ajoute la version compatible dans le fichier requierements.txt, mlflow==2.22.0
+
+## A faire :
+
+   - Compléter les tests unitaires
+   - Identifier et isoler automatiquement le meilleur modèle dans MinIO (selon les métriques MLflow)
+   - Déclencher le DAG Airflow automatiquement (à intervalle régulier ou sur nouvel entraînement)
+
+
+
