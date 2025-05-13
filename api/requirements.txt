@@ -5,3 +5,10 @@ torchvision
 Pillow
 boto3
 python-multipart
+
+# fastapi
+# uvicorn
+# boto3
+# python-multipart
+
+# streamlit

@@ -23,7 +23,10 @@ if uploaded_file is not None:
     with st.spinner("Prédiction en cours..."):
         files = {"file": (uploaded_file.name, file_bytes, uploaded_file.type)}
         try:
-            response = requests.post("http://localhost:8000/predict", files=files)
+            # response = requests.post("http://localhost:8000/predict", files=files)
+            API_URL = "http://api:8000/predict"
+            response = requests.post(API_URL, files=files)
+
             if response.status_code == 200:
                 prediction = response.json().get("prediction")
                 st.success(f"Prédiction : **{prediction.upper()}**")

@@ -9,7 +9,7 @@ import os
 from model import LogisticRegressionModel
 
 # Configuration MinIO, a mettre dans le fichier .env
-MINIO_ENDPOINT = "localhost:9000"  # Sans http:// ici pour boto3
+MINIO_ENDPOINT = "minio:9000" #"localhost:9000"  # Sans http:// ici pour boto3
 MINIO_USER = os.getenv("MINIO_USER", "minio")
 MINIO_PASS = os.getenv("MINIO_PASS", "miniopassword")
 BUCKET_NAME = "bucket.romain"  
