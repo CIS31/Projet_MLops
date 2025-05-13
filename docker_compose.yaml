@@ -207,6 +207,7 @@ services:
   api:
     build:
       context: ./api
+      dockerfile: Dockerfile.api 
     container_name: api
     ports:
       - "8000:8000"
@@ -221,7 +222,7 @@ services:
   webapp:
     build:
       context: ./webapp
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.webapp 
     container_name: webapp
     ports:
       - "8501:8501"

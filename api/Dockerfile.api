@@ -9,10 +9,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy API source code
-COPY app/ ./app/
+COPY app/ ./
 
 # Set environment variables (allowing to see logs in real-time)
 ENV PYTHONUNBUFFERED=1
-
+ENV PYTHONPATH=/app
 # Launch API
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
