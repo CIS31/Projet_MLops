@@ -8,3 +8,5 @@ data
 photo.jpg
 Architecture.txt
 # api/app/requirements.txt
+minio-secret.yaml
+postgres-secret.yaml
