@@ -3,13 +3,15 @@ kind: Service
 metadata:
   name: minio
 spec:
-  type: ClusterIP
+  type: NodePort
   selector:
     app: minio
   ports:
     - name: api
       port: 9000
       targetPort: 9000
+      nodePort: 30900  
     - name: ui
       port: 8900
       targetPort: 8900
+      nodePort: 30890

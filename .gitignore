@@ -8,5 +8,30 @@ data
 photo.jpg
 Architecture.txt
 # api/app/requirements.txt
-minio-secret.yaml
+# minio-secret.yaml
 postgres-secret.yaml
+postgres-pvc.yaml
+postgres-pv.yaml
+postgres-service.yaml
+
+minio-secret.yaml
+minio-pvc.yaml
+minio-pv.yaml
+minio-service.yaml
+
+
+#  docker stop $(docker ps -q)
+#  docker rm $(docker ps -aq)
+#  docker rmi $(docker images -q) --force
+#  docker volume rm $(docker volume ls -q)
+#  docker builder prune --all --force
+
+# # kubectl get nodes
+# # dans le dossier k8s lancer 
+# # kubectl apply -f .
+
+# kubectl delete deployment airflow-webserver airflow-scheduler airflow-triggerer
+# kubectl delete job airflow-init
+# kubectl delete service airflow-webserver
+# kubectl delete configmap airflow-config
+
