@@ -1,8 +1,7 @@
 # Projet MLOps : Classification d'Images (Dandelion vs Grass)
 
 ##  Description du Projet
-Ce projet met en place une pipeline MLOps complète pour un modèle de classification d'images (pissenlits vs herbe) en utilisant diverses technologies modernes. Il intègre le prétraitement des données, l'entraînement et la gestion du modèle, le déploiement, la surveillance et l'automatisation du pipeline.
-
+Ce projet met en place une pipeline MLOps complète pour un modèle de classification d'images (pissenlits vs herbe) en utilisant diverses technologies modernes. Il intègre le prétraitement des données, l'entraînement et la gestion du modèle, le déploiement, la surveillance et l'automatisation de la pipeline.
 
 ##  Technologies Utilisées
 | **Composant**          | **Technologie**        |
@@ -18,26 +17,8 @@ Ce projet met en place une pipeline MLOps complète pour un modèle de classific
 | **Registry Docker**   | DockerHub           |
 | **API Serving**       | FastAPI             |
 | **Déploiement**       | Kubernetes          |
-| **Monitoring**        | Elasticsearch & Kibana |
 
-
-##  Configuration et Installation
-### Prérequis
-- Docker & Docker Compose
-- Python 3.8+
-- Kubernetes (MiniKube ou Docker Desktop)
-- Git
   
-##  Accès aux Services
-
-| Service     | URL                             |
-|-------------|----------------------------------|
-| **API FastAPI** | [http://localhost:8000/docs](http://localhost:8000/docs) |
-| **WebApp Streamlit** | [http://localhost:8501](http://localhost:8501) |
-| **MinIO UI** | [http://localhost:9000](http://localhost:9000) |
-| **Airflow**  | [http://localhost:8080](http://localhost:8080) |
-| **MLflow UI**| [http://localhost:5000](http://localhost:5000) |
-
 ##  Pipeline MLOps
 
 1. **Extraction & Prétraitement des Données**
@@ -45,29 +26,44 @@ Ce projet met en place une pipeline MLOps complète pour un modèle de classific
    - Nettoyage et transformation des données
    - Stockage des features dans PostgreSQL
 
+![image](https://github.com/user-attachments/assets/baa26b87-76d9-4344-84d2-22c27518e979)
+
 2. **Entraînement du Modèle**
    - Entraînement avec pyTorch
    - Enregistrement des expériences avec MLflow
    - Sauvegarde du modèle sur AWS S3 (MinIO)
 
+![image](https://github.com/user-attachments/assets/0baa66c3-44fb-484d-9c7b-12280ec7d23c)
+
 3. **Déploiement & API**
    - API FastAPI pour servir le modèle
    - WebApp (Streamlit) pour l'interface utilisateur
 
+![image](https://github.com/user-attachments/assets/cb7febd0-f4c9-4507-8b97-f93664e33d86)
+
 4. **Automatisation avec Apache Airflow**
    - DAG pour réentraîner et mettre à jour le modèle
+
+![image](https://github.com/user-attachments/assets/3b90377f-6ee0-47b5-a161-33c7f6835218)
+![image](https://github.com/user-attachments/assets/ecc16c07-479f-4c76-88ed-f6f78bbb9bcd)
 
 5. **CI/CD & Déploiement sur Kubernetes**
    - Tests unitaires et d’intégration avec GitHub Actions
    - Conteneurisation avec Docker
    - Déploiement sur Kubernetes
 
-6. **Monitoring**
-   - Logs et métriques avec Elasticsearch & Kibana
+![image](https://github.com/user-attachments/assets/694d6bf4-014d-45ec-89e5-c307b3a9d37e)
 
-## Commandes utiles sur plateforme de dev :
+##  Configuration et Installation
+### Prérequis
+- Docker & Docker Compose
+- Python 3.8+
+- Kubernetes (MiniKube ou Docker Desktop)
+- Git
 
-   **Lancer le projet :**
+## Commandes utiles :
+
+   **Lancer le projet sur docker :**
    - docker-compose -f docker_compose.yaml up -d
 
    **Lancer les tests :**
@@ -84,11 +80,15 @@ Ce projet met en place une pipeline MLOps complète pour un modèle de classific
    - pip install mlflow
    - pip list #mlflow est présent et on ajoute la version compatible dans le fichier requierements.txt, mlflow==2.22.0
 
-## A faire :
+##  Accès aux Services Docker
 
-   - Compléter les tests unitaires
-   - Identifier et isoler automatiquement le meilleur modèle dans MinIO (selon les métriques MLflow)
-   - Déclencher le DAG Airflow automatiquement (à intervalle régulier ou sur nouvel entraînement)
+| Service     | URL                             |
+|-------------|----------------------------------|
+| **API FastAPI** | [http://localhost:8000/docs](http://localhost:8000/docs) |
+| **WebApp Streamlit** | [http://localhost:8501](http://localhost:8501) |
+| **MinIO UI** | [http://localhost:9000](http://localhost:9000) |
+| **Airflow**  | [http://localhost:8080](http://localhost:8080) |
+| **MLflow UI**| [http://localhost:5000](http://localhost:5000) |
 
 
 
