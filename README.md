@@ -26,14 +26,14 @@ Ce projet met en place une pipeline MLOps complète pour un modèle de classific
    - Nettoyage et transformation des données
    - Stockage des features dans PostgreSQL
 
-![image](https://github.com/user-attachments/assets/baa26b87-76d9-4344-84d2-22c27518e979)
+![image](https://github.com/user-attachments/assets/d45f2c7c-de66-45b4-ab70-6de4637f2ef0)
 
 2. **Entraînement du Modèle**
    - Entraînement avec pyTorch
    - Enregistrement des expériences avec MLflow
    - Sauvegarde du modèle sur AWS S3 (MinIO)
 
-![image](https://github.com/user-attachments/assets/0baa66c3-44fb-484d-9c7b-12280ec7d23c)
+![image](https://github.com/user-attachments/assets/7b31f124-64d0-492a-91a1-58e9757b5433)
 
 3. **Déploiement & API**
    - API FastAPI pour servir le modèle
@@ -44,8 +44,8 @@ Ce projet met en place une pipeline MLOps complète pour un modèle de classific
 4. **Automatisation avec Apache Airflow**
    - DAG pour réentraîner et mettre à jour le modèle
 
-![image](https://github.com/user-attachments/assets/3b90377f-6ee0-47b5-a161-33c7f6835218)
-![image](https://github.com/user-attachments/assets/ecc16c07-479f-4c76-88ed-f6f78bbb9bcd)
+![image](https://github.com/user-attachments/assets/a5e94aa6-e3eb-4dae-958e-f902eb34d4fd)
+![image](https://github.com/user-attachments/assets/8daa1eec-8c9c-42b6-a7f3-d7887ad45259)
 
 5. **CI/CD & Déploiement sur Kubernetes**
    - Tests unitaires et d’intégration avec GitHub Actions
