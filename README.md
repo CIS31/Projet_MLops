@@ -72,7 +72,7 @@ Ce projet met en place une pipeline MLOps complète pour un modèle de classific
 
    - kubectl apply -f deployement.yaml
      
-     **Exposer le service minio :**
+   **Exposer le service minio :**
      
    - kubectl port-forward svc/minio 9101:9101
 
