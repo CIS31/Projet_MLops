@@ -50,21 +50,31 @@ Ce projet met en place une pipeline MLOps complète pour un modèle de classific
 5. **CI/CD & Déploiement sur Kubernetes**
    - Tests unitaires et d’intégration avec GitHub Actions
    - Conteneurisation avec Docker
-   - Déploiement sur Kubernetes
+   - Déploiement de l'API et de la Webapp sur Kubernetes en local (Docker Desktop) 
 
-![image](https://github.com/user-attachments/assets/694d6bf4-014d-45ec-89e5-c307b3a9d37e)
+![image](https://github.com/user-attachments/assets/7c548a76-08cc-4136-9f98-d1d8a832eaf1)
 
 ##  Configuration et Installation
 ### Prérequis
-- Docker & Docker Compose
 - Python 3.8+
-- Kubernetes (MiniKube ou Docker Desktop)
 - Git
+- Docker Desktop installé avec Kubernetes activé
+- Toutes les images Docker nécessaires doivent être buildées et visibles localement 
+
 
 ## Commandes utiles :
 
    **Lancer le projet sur docker :**
    - docker-compose -f docker_compose.yaml up -d
+     
+   **Lancer le deploiement sur kubernetes Local:**
+    Assurez-vous que Kubernetes est bien activé dans Docker Desktop  
+
+   - kubectl apply -f deployement.yaml
+     
+     **Exposer le service minio :**
+     
+   - kubectl port-forward svc/minio 9101:9101
 
    **Lancer les tests :**
    - PYTHONPATH=$(pwd) pytest -v tests/
@@ -80,8 +90,9 @@ Ce projet met en place une pipeline MLOps complète pour un modèle de classific
    - pip install mlflow
    - pip list #mlflow est présent et on ajoute la version compatible dans le fichier requierements.txt, mlflow==2.22.0
 
-##  Accès aux Services Docker
+##  Accès aux Services Docker et Kubernetes
 
+   **Docker**
 | Service     | URL                             |
 |-------------|----------------------------------|
 | **API FastAPI** | [http://localhost:8000/docs](http://localhost:8000/docs) |
@@ -89,6 +100,18 @@ Ce projet met en place une pipeline MLOps complète pour un modèle de classific
 | **MinIO UI** | [http://localhost:9000](http://localhost:9000) |
 | **Airflow**  | [http://localhost:8080](http://localhost:8080) |
 | **MLflow UI**| [http://localhost:5000](http://localhost:5000) |
+
+
+   **Kubernetes**
+| Service     | URL                             |
+|-------------|----------------------------------|
+| **API FastAPI** | [http://localhost:30080/docs](http://localhost:30080/docs) |
+| **WebApp Streamlit** | [http://localhost:30085](http://localhost:30085) |
+| **MinIO UI** | [http://localhost:9101](http://localhost:9101) |
+
+
+
+
 
 
 
