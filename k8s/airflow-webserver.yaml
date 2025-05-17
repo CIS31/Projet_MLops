@@ -255,13 +255,13 @@ spec:
           envFrom:
             - configMapRef:
                 name: airflow-config
-          volumeMounts:
-            - name: dags
-              mountPath: /opt/airflow/dags
-      volumes:
-        - name: dags
-          hostPath:
-            path: /mnt/d/Projet_MLOps/Projet_MLops/airflow/dags
+      #     volumeMounts:
+      #       - name: dags
+      #         mountPath: /opt/airflow/dags
+      # volumes:
+      #   - name: dags
+      #     hostPath:
+      #       path: /mnt/d/Projet_MLOps/Projet_MLops/airflow/dags
 
 ---
 apiVersion: apps/v1
@@ -302,14 +302,14 @@ spec:
           envFrom:
             - configMapRef:
                 name: airflow-config
-          volumeMounts:
-            - name: dags
-              mountPath: /opt/airflow/dags
+      #     volumeMounts:
+      #       - name: dags
+      #         mountPath: /opt/airflow/dags
 
-      volumes:
-        - name: dags
-          hostPath:
-            path: /mnt/d/Projet_MLOps/Projet_MLops/airflow/dags
+      # volumes:
+      #   - name: dags
+      #     hostPath:
+      #       path: /mnt/d/Projet_MLOps/Projet_MLops/airflow/dags
 
 ---
 apiVersion: apps/v1
@@ -352,13 +352,13 @@ spec:
           envFrom:
             - configMapRef:
                 name: airflow-config
-          volumeMounts:
-            - name: dags
-              mountPath: /opt/airflow/dags
-      volumes:
-        - name: dags
-          hostPath:
-            path: /mnt/d/Projet_MLOps/Projet_MLops/airflow/dags
+      #     volumeMounts:
+      #       - name: dags
+      #         mountPath: /opt/airflow/dags
+      # volumes:
+      #   - name: dags
+      #     hostPath:
+      #       path: /mnt/d/Projet_MLOps/Projet_MLops/airflow/dags
 ---
 apiVersion: v1
 kind: Service
@@ -371,6 +371,6 @@ spec:
     - protocol: TCP
       port: 8080
       targetPort: 8080
-      nodePort: 30080
+      nodePort: 8080
   type: NodePort
 

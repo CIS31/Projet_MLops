@@ -2,7 +2,10 @@
 FROM apache/airflow:2.8.2-python3.9
 
 # Copier le fichier requirements.txt dans l'image
+# COPY .env /sources/.env
 COPY requirements.txt /requirements.txt
+# COPY airflow/dags /opt/airflow/dags
+# COPY airflow/plugins /opt/airflow/plugins
 
 # Installer les dépendances via pip
 RUN pip install --no-cache-dir -r /requirements.txt

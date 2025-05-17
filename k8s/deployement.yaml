@@ -1,0 +1,194 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+data:
+  MINIO_USER: minio
+  MINIO_PASS: miniopassword
+  
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webapp
+  template:
+    metadata:
+      labels:
+        app: webapp
+    spec:
+      containers:
+        - name: webapp
+          image: projet_mlops-webapp:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8501
+          env:
+            - name: API_URL
+              value: http://api-service:8000/predict
+            - name: MINIO_HOST
+              value: http://minio:9001
+            # - name: MINIO_USER
+            #   valueFrom:
+            #     configMapKeyRef:
+            #       name: api-config
+            #       key: MINIO_USER
+            # - name: MINIO_PASS
+            #   valueFrom:
+            #     configMapKeyRef:
+            #       name: api-config
+            #       key: MINIO_PASS
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-service
+spec:
+  type: NodePort
+  selector:
+    app: webapp
+  ports:
+    - port: 8501
+      targetPort: 8501
+      nodePort: 30085
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+        - name: minio
+          image: minio/minio:latest
+          args:
+            - server
+            - --address
+            - ":9100"
+            - --console-address
+            - ":9101"
+            - /data
+          env:
+            - name: MINIO_ROOT_USER
+              value: minio
+            - name: MINIO_ROOT_PASSWORD
+              value: miniopassword
+          ports:
+            - name: api
+              containerPort: 9100
+            - name: console
+              containerPort: 9101
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+spec:
+  type: ClusterIP
+  selector:
+    app: minio
+  ports:
+    - name: api
+      port: 9100
+      targetPort: 9100
+    - name: console
+      port: 9101
+      targetPort: 9101
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-copy
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: mc
+          image: minio/mc
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              mc alias set localminio http://host.docker.internal:9000 minio miniopassword && \
+              mc alias set k8sminio http://minio:9100 minio miniopassword && \
+              mc mb k8sminio/bucket.romain || true && \
+              mc cp --recursive localminio/bucket.romain/model/ k8sminio/bucket.romain/model/
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      initContainers: # Wait for minio and bucket to be ready
+        - name: wait-for-minio
+          image: busybox
+          command: ['sh', '-c', 'until nc -z minio 9100; do echo "waiting for minio..."; sleep 2; done']
+        - name: wait-for-bucket
+          image: minio/mc
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mc alias set minio http://minio:9100 minio miniopassword && \
+              until mc ls minio/bucket.romain/model/; do echo "waiting for bucket..."; sleep 2; done
+      containers: #
+        - name: api
+          image: projet_mlops-api:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: api-config
+          env:
+            - name: MINIO_HOST
+              value: http://minio:9100
+            - name: BUCKET_NAME # added to use the bucket name in the code #
+              value: bucket.romain
+          readinessProbe: # Check if the API is ready
+            httpGet:
+              path: /docs  
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5 #
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+spec:
+  type: NodePort
+  selector:
+    app: api
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30080
+
+
